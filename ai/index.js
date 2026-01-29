@@ -4,6 +4,7 @@ const fetch = require('node-fetch');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const { parameters } = require('./constants');
 require('dotenv').config();
 
 const app = express();
@@ -94,7 +95,7 @@ app.post('/api/chat', async (req, res) => {
             model,
             messages: processedMessages,
             stream: stream !== false, // Default to true
-            ...(options && { options })
+            options: parameters, // Use constants from parameters
         };
 
         console.log(`Making request to Ollama: ${model} (${processedMessages.length} messages)`);
@@ -129,53 +130,53 @@ app.post('/api/chat', async (req, res) => {
 
 // Dedicated image processing endpoint (alternative approach)
 app.post('/api/images', async (req, res) => {
-  try {
-    const { model, prompt, image, options } = req.body;
+    try {
+        const { model, prompt, image, options } = req.body;
 
-    let imageData = image;
-    if (typeof image === 'string' && image.startsWith('data:image')) {
-      imageData = image.split(',')[1];
+        let imageData = image;
+        if (typeof image === 'string' && image.startsWith('data:image')) {
+            imageData = image.split(',')[1];
+        }
+
+        const requestBody = {
+            model,
+            messages: [{
+                role: 'user',
+                content: prompt,
+                images: [imageData]
+            }],
+            stream: true,
+            options: parameters, // Use constants from parameters
+        };
+
+        const ollamaRes = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!ollamaRes.ok || !ollamaRes.body) {
+            const text = await ollamaRes.text();
+            throw new Error(`Ollama API error: ${ollamaRes.status} - ${text}`);
+        }
+
+        // Set headers to allow chunked streaming
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.setHeader('Transfer-Encoding', 'chunked');
+
+        // ✅ Pipe response stream directly from Ollama to client
+        ollamaRes.body.pipe(res);
+
+        // Close stream on finish
+        ollamaRes.body.on('end', () => res.end());
+
+    } catch (error) {
+        console.error('Image processing error:', error.message);
+        res.status(500).json({
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
     }
-
-    const requestBody = {
-      model,
-      messages: [{
-        role: 'user',
-        content: prompt,
-        images: [imageData]
-      }],
-      stream: true,
-      ...(options && { options })
-    };
-
-    const ollamaRes = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
-    });
-
-    if (!ollamaRes.ok || !ollamaRes.body) {
-      const text = await ollamaRes.text();
-      throw new Error(`Ollama API error: ${ollamaRes.status} - ${text}`);
-    }
-
-    // Set headers to allow chunked streaming
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader('Transfer-Encoding', 'chunked');
-
-    // ✅ Pipe response stream directly from Ollama to client
-    ollamaRes.body.pipe(res);
-
-    // Close stream on finish
-    ollamaRes.body.on('end', () => res.end());
-
-  } catch (error) {
-    console.error('Image processing error:', error.message);
-    res.status(500).json({
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
 });
 
 // File upload endpoint for images

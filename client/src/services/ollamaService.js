@@ -45,7 +45,8 @@ export const useOllamaAPI = (baseUrl = 'http://localhost:4000') => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'gemma3:4b',
+          // model: 'gemma3:4b',
+          model: 'gpt-oss:120b-cloud',
           messages: cleanMessages,
           stream: true
         })
@@ -122,7 +123,8 @@ const processImage = useCallback(async (image, prompt, model, onStream) => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'gemma3:4b',
+      // model: 'gemma3:4b',
+      model: 'qwen2.5vl:7b',
       prompt,
       image,
       stream: true,
