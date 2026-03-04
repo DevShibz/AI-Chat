@@ -19,6 +19,7 @@ export const useOllamaAPI = (baseUrl = 'http://localhost:4000') => {
   }, [baseUrl]);
 
   const streamChat = useCallback(async function* (messages, model) {
+    console.log('streamChat', messages, model);
     try {
       // Clean up messages to ensure no circular references
       const cleanMessages = messages.map(msg => {
@@ -45,8 +46,7 @@ export const useOllamaAPI = (baseUrl = 'http://localhost:4000') => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          // model: 'gemma3:4b',
-          model: 'gpt-oss:120b-cloud',
+          model: model,
           messages: cleanMessages,
           stream: true
         })
@@ -66,6 +66,9 @@ export const useOllamaAPI = (baseUrl = 'http://localhost:4000') => {
         const { done, value } = await reader.read();
         if (done) break;
 
+        // Log first chunk arrival for debugging
+        if (!buffer) console.log('Received first stream chunk');
+
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
@@ -78,10 +81,20 @@ export const useOllamaAPI = (baseUrl = 'http://localhost:4000') => {
                 yield data.message.content;
               }
               if (data.done) return;
-            } catch {
-              // ignore invalid json chunks
+            } catch (e) {
+              console.warn('Skipping invalid JSON chunk:', line, e);
             }
           }
+        }
+      }
+
+      // Process any remaining buffer
+      if (buffer.trim()) {
+        try {
+          const data = JSON.parse(buffer);
+          if (data.message?.content) yield data.message.content;
+        } catch (e) {
+          console.warn('Skipping invalid final JSON chunk:', buffer, e);
         }
       }
     } catch (error) {
@@ -118,55 +131,55 @@ export const useOllamaAPI = (baseUrl = 'http://localhost:4000') => {
   //   }
   // }, [baseUrl]);
 
-const processImage = useCallback(async (image, prompt, model, onStream) => {
-  const response = await fetch(`${baseUrl}/api/images`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      // model: 'gemma3:4b',
-      model: 'qwen2.5vl:7b',
-      prompt,
-      image,
-      stream: true,
-    }),
-  });
+  const processImage = useCallback(async (image, prompt, model, onStream) => {
+    const response = await fetch(`${baseUrl}/api/images`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        // model: 'gemma3:4b',
+        model: model,
+        prompt,
+        image,
+        stream: true,
+      }),
+    });
 
-  if (!response.ok || !response.body) {
-    throw new Error(`Failed to process image: ${response.status}`);
-  }
+    if (!response.ok || !response.body) {
+      throw new Error(`Failed to process image: ${response.status}`);
+    }
 
-  const decoder = new TextDecoder();
-  const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    const reader = response.body.getReader();
 
-  let responseText = '';
-  let buffer = '';
+    let responseText = '';
+    let buffer = '';
 
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
 
-    buffer += decoder.decode(value, { stream: true });
+      buffer += decoder.decode(value, { stream: true });
 
-    // Split on newlines (assuming each chunk ends with `\n`)
-    const lines = buffer.split('\n');
-    buffer = lines.pop(); // Save last partial line for next chunk
+      // Split on newlines (assuming each chunk ends with `\n`)
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // Save last partial line for next chunk
 
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      try {
-        const parsed = JSON.parse(line);
-        if (parsed.message && parsed.message.role === 'assistant' && parsed.message.content) {
-          responseText += parsed.message.content;
-          if (onStream) onStream(responseText);
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const parsed = JSON.parse(line);
+          if (parsed.message && parsed.message.role === 'assistant' && parsed.message.content) {
+            responseText += parsed.message.content;
+            if (onStream) onStream(responseText);
+          }
+        } catch (err) {
+          console.warn('Failed to parse stream chunk:', err, line);
         }
-      } catch (err) {
-        console.warn('Failed to parse stream chunk:', err, line);
       }
     }
-  }
 
-  return responseText;
-}, [baseUrl]);
+    return responseText;
+  }, [baseUrl]);
 
   const checkStatus = useCallback(async () => {
     try {

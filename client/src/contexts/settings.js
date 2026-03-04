@@ -11,7 +11,7 @@ export const useSettings = () => {
 export const SettingsProvider = ({ children }) => {
   const [settings, setSettings] = useState({
     ollamaUrl: 'http://localhost:4000',
-    defaultModel: 'gemma3:4b',
+    defaultModel: 'qwen3-coder:480b-cloud',
     maxTokens: 2048,
     temperature: 0.7
   });

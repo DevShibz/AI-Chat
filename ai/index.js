@@ -114,7 +114,24 @@ app.post('/api/chat', async (req, res) => {
             throw new Error(`Ollama API error: ${response.status} - ${errorText}`);
         }
 
-        response.body.pipe(res);
+        // Set headers for streaming
+        res.setHeader('Content-Type', 'application/x-ndjson');
+        res.setHeader('Content-Type', 'application/x-ndjson');
+        // res.setHeader('Transfer-Encoding', 'chunked'); // Let Node handle this automatically
+
+        // Stream the response directly
+        response.body.on('data', (chunk) => {
+            res.write(chunk);
+        });
+
+        response.body.on('end', () => {
+            res.end();
+        });
+
+        response.body.on('error', (err) => {
+            console.error('Stream error:', err);
+            res.end();
+        });
 
     } catch (error) {
         console.error('Chat API Error:', error.message);
@@ -165,10 +182,19 @@ app.post('/api/images', async (req, res) => {
         res.setHeader('Transfer-Encoding', 'chunked');
 
         // ✅ Pipe response stream directly from Ollama to client
-        ollamaRes.body.pipe(res);
+        // Stream the response directly to client
+        ollamaRes.body.on('data', (chunk) => {
+            res.write(chunk);
+        });
 
-        // Close stream on finish
-        ollamaRes.body.on('end', () => res.end());
+        ollamaRes.body.on('end', () => {
+            res.end();
+        });
+
+        ollamaRes.body.on('error', (err) => {
+            console.error('Stream error:', err);
+            res.end();
+        });
 
     } catch (error) {
         console.error('Image processing error:', error.message);

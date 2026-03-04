@@ -5,14 +5,18 @@ import ChatContainer from './components/chatcontainer';
 import { SettingsProvider } from './contexts/settings';
 import './index.css';
 
+import { BrowserRouter } from 'react-router-dom';
+
 const App = () => (
-  <PreferencesProvider>
-    <SettingsProvider>
-    <ChatProvider>
-      <ChatContainer />
-    </ChatProvider>
-    </SettingsProvider>
-  </PreferencesProvider>
+  <BrowserRouter>
+    <PreferencesProvider>
+      <SettingsProvider>
+        <ChatProvider>
+          <ChatContainer />
+        </ChatProvider>
+      </SettingsProvider>
+    </PreferencesProvider>
+  </BrowserRouter>
 );
 
 export default App;

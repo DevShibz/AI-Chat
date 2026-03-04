@@ -16,23 +16,39 @@ export const ChatProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const { settings } = useSettings();
+  const [selectedModel, setSelectedModel] = useState(settings.defaultModel);
+  const [artifact, setArtifact] = useState(null); // { type, content, title }
 
   const createConversation = useCallback((model) => {
+    const validModel = typeof model === 'string' ? model : selectedModel;
     const newConv = {
       id: generateId(),
       title: 'New Conversation',
       messages: [],
-      model,
+      model: validModel,
       createdAt: new Date(),
       updatedAt: new Date()
     };
     setConversations(prev => [newConv, ...prev]);
     setCurrentConversation(newConv);
-  }, []);
+  }, [selectedModel]);
+
+  const updateConversationModel = useCallback((model) => {
+    if (currentConversation) {
+      const updatedConv = { ...currentConversation, model };
+      setCurrentConversation(updatedConv);
+      setConversations(prev => prev.map(c => c.id === updatedConv.id ? updatedConv : c));
+    }
+  }, [currentConversation]);
 
   const selectConversation = useCallback((id) => {
     const found = conversations.find(c => c.id === id);
-    if (found) setCurrentConversation(found);
+    if (found) {
+      setCurrentConversation(found);
+      if (found.model) {
+        setSelectedModel(found.model);
+      }
+    }
   }, [conversations]);
 
   const deleteConversation = useCallback((id) => {
@@ -140,17 +156,25 @@ export const ChatProvider = ({ children }) => {
     currentConversation,
     isLoading,
     error,
+    artifact,
+    setArtifact,
     setCurrentConversation,
     createConversation,
     selectConversation,
     deleteConversation,
     sendMessage,
-    clearError
+    clearError,
+    selectedModel,
+    setSelectedModel,
+    updateConversationModel
   }), [
     conversations, currentConversation, isLoading,
     error, createConversation, selectConversation,
     deleteConversation, sendMessage, clearError,
-    setCurrentConversation
+    setCurrentConversation,
+    selectedModel,
+    setSelectedModel,
+    updateConversationModel
   ]);
 
   return (

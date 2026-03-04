@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --font-sans: 'Inter', sans-serif;
+    --color-primary: #3b82f6;
+    --color-secondary: #10b981;
+}
+
+:root {
+    font-family: 'Inter', sans-serif;
+    color-scheme: light dark;
+}
+
+body {
+    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+    font-family: 'Inter', sans-serif;
+}
+
+/* CSS Override: Code Blocks inside Tables */
+.markdown-table .markdown-code-block {
+    margin: 0.5rem 0;
+    border: 1px solid #e5e7eb;
+}
+
+.dark .markdown-table .markdown-code-block {
+    border-color: #374151;
+}
+
+.markdown-table .markdown-code-block .code-block-header {
+    display: none;
+}
+
+/* Make inner pre tighter */
+.markdown-table .markdown-code-block div[style*="background-color"] {
+    padding: 0.75rem !important;
+    font-size: 0.8rem !important;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}

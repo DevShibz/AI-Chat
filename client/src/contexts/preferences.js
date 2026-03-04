@@ -16,14 +16,30 @@ export const PreferencesProvider = ({ children }) => {
     soundEnabled: false
   });
 
+  React.useEffect(() => {
+    if (preferences.theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [preferences.theme]);
+
   const updatePreferences = useCallback((newPrefs) => {
     setPreferences(prev => ({ ...prev, ...newPrefs }));
   }, []);
 
+  const toggleTheme = useCallback(() => {
+    setPreferences(prev => ({
+      ...prev,
+      theme: prev.theme === 'light' ? 'dark' : 'light'
+    }));
+  }, []);
+
   const value = useMemo(() => ({
     preferences,
-    updatePreferences
-  }), [preferences, updatePreferences]);
+    updatePreferences,
+    toggleTheme
+  }), [preferences, updatePreferences, toggleTheme]);
 
   return (
     <PreferencesContext.Provider value={value}>
